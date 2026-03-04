@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Weather App</title>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+  font-family:'Poppins',sans-serif;
+}
+
+body{
+  background:#87ceeb;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
+  transition:0.5s;
+}
+
+.weather-container{
+  background:rgba(255,255,255,0.8);
+  padding:30px;
+  border-radius:10px;
+  width:350px;
+  text-align:center;
+  box-shadow:0 10px 25px rgba(0,0,0,0.2);
+}
+
+.weather-container h2{
+  margin-bottom:15px;
+}
+
+input{
+  width:80%;
+  padding:10px;
+  border:1px solid #ddd;
+  border-radius:5px;
+  margin-bottom:15px;
+}
+
+button{
+  padding:10px 15px;
+  border:none;
+  background:#007bff;
+  color:white;
+  border-radius:5px;
+  cursor:pointer;
+  font-weight:600;
+}
+
+button:hover{
+  opacity:0.9;
+}
+
+.icon img{
+  width:100px;
+}
+
+.info{
+  margin-top:15px;
+  text-align:left;
+}
+
+.info p{
+  margin:6px 0;
+  font-size:15px;
+  font-weight:500;
+}
+
+.error{
+  color:#c00;
+  margin-top:10px;
+  font-size:14px;
+}
+</style>
+
+</head>
+<body>
+
+<div class="weather-container">
+  <h2>Weather App</h2>
+  <input type="text" id="cityInput" placeholder="Enter city name">
+  <button onclick="getWeatherByCity()">Search Weather</button>
+  <button onclick="getWeatherByGeo()">Detect My Weather</button>
+
+  <div id="error" class="error"></div>
+
+  <div id="weatherInfo" class="info" style="display:none;">
+    <div class="icon"><img id="weatherIcon" src=""></div>
+    <h3 id="cityName"></h3>
+    <p id="description"></p>
+    <p><strong>Temp:</strong> <span id="temp"></span>°C</p>
+    <p><strong>Feels Like:</strong> <span id="feels"></span>°C</p>
+    <p><strong>Humidity:</strong> <span id="humidity"></span>%</p>
+    <p><strong>Wind:</strong> <span id="wind"></span> m/s</p>
+    <p><strong>Sunrise:</strong> <span id="sunrise"></span></p>
+    <p><strong>Sunset:</strong> <span id="sunset"></span></p>
+  </div>
+</div>
+
+<script>
+const apiKey = "YOUR_OPENWEATHERMAP_API_KEY"; // 🔑 Replace with your API key
+
+// Format time (hour:minute)
+function formatTime(timestamp, timezone) {
+  const date = new Date((timestamp + timezone) * 1000);
+  return date.toUTCString().match(/\d{2}:\d{2}/)[0];
+}
+
+function showWeather(data) {
+  document.getElementById("weatherInfo").style.display = "block";
+  document.getElementById("error").innerText = "";
+
+  document.getElementById("cityName").innerText = `${data.name}, ${data.sys.country}`;
+  document.getElementById("description").innerText = data.weather[0].description;
+  document.getElementById("temp").innerText = Math.round(data.main.temp);
+  document.getElementById("feels").innerText = Math.round(data.main.feels_like);
+  document.getElementById("humidity").innerText = data.main.humidity;
+  document.getElementById("wind").innerText = data.wind.speed;
+  document.getElementById("sunrise").innerText = formatTime(data.sys.sunrise, data.timezone);
+  document.getElementById("sunset").innerText = formatTime(data.sys.sunset, data.timezone);
+
+  const iconCode = data.weather[0].icon;
+  document.getElementById("weatherIcon").src = 
+      `https://openweathermap.org/img/wn/${iconCode}@2x.png`;
+
+  // 🌅 Change background based on weather
+  const main = data.weather[0].main.toLowerCase();
+  if(main.includes("cloud")) document.body.style.background = "#778899";
+  else if(main.includes("rain")) document.body.style.background = "#4a6fa5";
+  else if(main.includes("clear")) document.body.style.background = "#87ceeb";
+  else if(main.includes("snow")) document.body.style.background = "#aee1f9";
+  else document.body.style.background = "#87ceeb";
+}
+
+function getWeatherByCity() {
+  const city = document.getElementById("cityInput").value.trim();
+  if(!city) {
+    document.getElementById("error").innerText = "Please enter a city name.";
+    return;
+  }
+
+  fetch(`https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric`)
+    .then(res => {
+      if(!res.ok) throw new Error("City not found");
+      return res.json();
+    })
+    .then(showWeather)
+    .catch(() => {
+      document.getElementById("error").innerText = "City not found. Try again.";
+      document.getElementById("weatherInfo").style.display = "none";
+    });
+}
+
+function getWeatherByGeo() {
+  if(!navigator.geolocation) {
+    document.getElementById("error").innerText = "Geolocation not supported.";
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(position => {
+    const {latitude, longitude} = position.coords;
+    fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${apiKey}&units=metric`)
+      .then(res => res.json())
+      .then(showWeather)
+      .catch(err => {
+        document.getElementById("error").innerText = "Unable to get weather.";
+      });
+  });
+}
+</script>
+
+</body>
+</html>
